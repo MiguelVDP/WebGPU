@@ -1,0 +1,30 @@
+{
+  "name": "webgpu_proj",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "npm run build && npm run serve",
+    "install-missing-dependencies": "npm i && npm i @types/node && npm i --save-dev @webgpu/types && npm i ts-shader-loader && npm i gl-matrix",
+    "build": "webpack --config webpack.config.js",
+    "server": "live-server --cors"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@types/node": "^22.9.0",
+    "gl-matrix": "^3.4.3",
+    "http-server": "^14.1.1",
+    "jquery": "^3.7.1",
+    "ts-loader": "^9.5.1",
+    "ts-shader-loader": "^2.0.2",
+    "typescript": "^5.6.3",
+    "webpack": "^5.96.1",
+    "webpack-cli": "^5.1.4"
+  },
+  "devDependencies": {
+    "@types/jquery": "^3.5.32",
+    "@webgpu/types": "^0.1.51"
+  }
+}
