@@ -2,7 +2,7 @@ import { vec3, mat4 } from "gl-matrix";
 import { Deg2Rad } from "./math_stuff";
 import { lookup } from "dns";
 
-export class Camera{
+export class Camera {
     position!: vec3;      //Camera position
     phi: number;          //Spherical coordinate
     theta: number;        //Camera rotation on the Y axis
@@ -19,8 +19,8 @@ export class Camera{
      * @param phi Angle formed between the positive Y axis and the forward vector
      * @param theta Camera initial rotation along the Y axis
      */
-    constructor( position: vec3, phi: number, theta: number, rot_speed: number){
-        this.position  = position;
+    constructor(position: vec3, phi: number, theta: number, rot_speed: number) {
+        this.position = position;
         this.phi = phi;
         this.theta = theta;
         this.forward = vec3.create();
@@ -45,11 +45,11 @@ export class Camera{
 
         this.view = mat4.create();
         mat4.lookAt(this.view, this.position, target, this.up);
-        
+
     }
 
 
-    get_view(): mat4{
+    get_view(): mat4 {
         return this.view;
     }
 }
