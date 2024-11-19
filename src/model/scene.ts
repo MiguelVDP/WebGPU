@@ -15,9 +15,9 @@ export class Scene {
         this.triangle_count = 0;
 
         var i: number = 0;
-        for (var y: number = -5; y < 5; y++) {
+        for (var x: number = -5; x < 5; x++) {
             this.triangles.push(
-                new Triangle([0, y, -2], 0)
+                new Triangle([x, 0, -2], 0)
             );
 
             var balnk_matrix = mat4.create();

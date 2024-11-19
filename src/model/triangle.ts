@@ -18,7 +18,7 @@ export class Triangle {
     }
 
     update() {
-        this.eulers[1] += 0;
+        this.eulers[1] += 1;
         this.eulers[1] %= 360;
 
         this.model = mat4.create();
