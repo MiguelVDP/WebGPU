@@ -14,7 +14,7 @@ export class App {
     forwards_amount: number;
     right_amount: number;
 
-    constructor(canvas: HTMLCanvasElement){
+    constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this.renderer = new Renderer(canvas);
         this.scene = new Scene();
@@ -23,9 +23,9 @@ export class App {
         this.mouseXLabel = $("#mouse-x-label")
         this.mouseYLabel = $("#mouse-y-label")
 
-        $(document).on("keydown", (event) => {this.handle_keypress(event)});
-        $(document).on("keyup", (event) => {this.handle_keyrelease(event)});
-        
+        $(document).on("keydown", (event) => { this.handle_keypress(event) });
+        $(document).on("keyup", (event) => { this.handle_keyrelease(event) });
+
         this.canvas.onclick = () => {
             this.canvas.requestPointerLock();
         }
@@ -41,7 +41,7 @@ export class App {
         this.forwards_amount = 0;
     }
 
-    async initialize(){
+    async initialize() {
         await this.renderer.Initialize();
     }
 
@@ -53,10 +53,11 @@ export class App {
 
         this.renderer.render(
             this.scene.get_player(),
-            this.scene.get_triangles()
+            this.scene.get_triangles(),
+            this.scene.triangle_count
         );
-        
-        if(running){
+
+        if (running) {
             requestAnimationFrame(this.run)
         }
     }

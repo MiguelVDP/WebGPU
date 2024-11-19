@@ -23,18 +23,19 @@ export class Renderer {
     // Assets
     triangleMesh!: TriangleMesh;
     material!: Material;
+    object_buffer!: GPUBuffer;
 
 
-    constructor(canvas: HTMLCanvasElement){
+    constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
     }
 
-   async Initialize() {
+    async Initialize() {
 
         await this.setupDevice();
 
         await this.createAssets();
-    
+
         await this.makePipeline();
     }
 
@@ -42,12 +43,12 @@ export class Renderer {
 
         //adapter: wrapper around (physical) GPU.
         //Describes features and limits
-        this.adapter = <GPUAdapter> await navigator.gpu?.requestAdapter();
+        this.adapter = <GPUAdapter>await navigator.gpu?.requestAdapter();
         //device: wrapper around GPU functionality
         //Function calls are made through the device
-        this.device = <GPUDevice> await this.adapter?.requestDevice();
+        this.device = <GPUDevice>await this.adapter?.requestDevice();
         //context: similar to vulkan instance (or OpenGL context)
-        this.context = <GPUCanvasContext> this.canvas.getContext("webgpu");
+        this.context = <GPUCanvasContext>this.canvas.getContext("webgpu");
         this.format = "bgra8unorm";
         this.context.configure({
             device: this.device,
@@ -60,7 +61,7 @@ export class Renderer {
     async makePipeline() {
 
         this.uniformBuffer = this.device.createBuffer({
-            size: 64 * 3,
+            size: 64 * 2,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
@@ -81,10 +82,18 @@ export class Renderer {
                     visibility: GPUShaderStage.FRAGMENT,
                     sampler: {}
                 },
+                {
+                    binding: 3,
+                    visibility: GPUShaderStage.VERTEX,
+                    buffer: {
+                        type: "read-only-storage",
+                        hasDynamicOffset: false
+                    }
+                },
             ]
 
         });
-    
+
         this.bindGroup = this.device.createBindGroup({
             layout: bindGroupLayout,
             entries: [
@@ -101,37 +110,43 @@ export class Renderer {
                 {
                     binding: 2,
                     resource: this.material.sampler
+                },
+                {
+                    binding: 3,
+                    resource: {
+                        buffer: this.object_buffer
+                    }
                 }
             ]
         });
-        
+
         const pipelineLayout = this.device.createPipelineLayout({
             bindGroupLayouts: [bindGroupLayout]
         });
-    
+
         this.pipeline = this.device.createRenderPipeline({
-            vertex : {
-                module : this.device.createShaderModule({
-                    code : shader
+            vertex: {
+                module: this.device.createShaderModule({
+                    code: shader
                 }),
-                entryPoint : "vs_main",
+                entryPoint: "vs_main",
                 buffers: [this.triangleMesh.bufferLayout,]
             },
-    
-            fragment : {
-                module : this.device.createShaderModule({
-                    code : shader
+
+            fragment: {
+                module: this.device.createShaderModule({
+                    code: shader
                 }),
-                entryPoint : "fs_main",
-                targets : [{
-                    format : this.format
+                entryPoint: "fs_main",
+                targets: [{
+                    format: this.format
                 }]
             },
-    
-            primitive : {
-                topology : "triangle-list"
+
+            primitive: {
+                topology: "triangle-list"
             },
-    
+
             layout: pipelineLayout
         });
 
@@ -141,49 +156,49 @@ export class Renderer {
         this.triangleMesh = new TriangleMesh(this.device);
         this.material = new Material();
 
+        const bufferDescriptor: GPUBufferDescriptor = {
+            size: 64 * 1024,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        };
+        this.object_buffer = this.device.createBuffer(bufferDescriptor);
+
         await this.material.initialize(this.device, "dist/img/brocode.png");
     }
 
-    async render(camera: Camera, triangles: Triangle[]) {
+    async render(camera: Camera, triangles: Float32Array, triangle_count: number) {
 
         //make transforms
         const projection = mat4.create();
-        mat4.perspective(projection, Math.PI/4, 800/600, 0.1, 10);
+        mat4.perspective(projection, Math.PI / 4, 800 / 600, 0.1, 10);
         const view = camera.get_view();
-        this.device.queue.writeBuffer(this.uniformBuffer, 64, <ArrayBuffer>view);
-        this.device.queue.writeBuffer(this.uniformBuffer, 128, <ArrayBuffer>projection); 
-        
+
+        this.device.queue.writeBuffer(this.object_buffer, 0, triangles, 0, triangles.length)
+        this.device.queue.writeBuffer(this.uniformBuffer, 0, <ArrayBuffer>view);
+        this.device.queue.writeBuffer(this.uniformBuffer, 64, <ArrayBuffer>projection);
+
         //command encoder: records draw commands for submission
-        const commandEncoder : GPUCommandEncoder = this.device.createCommandEncoder();
+        const commandEncoder: GPUCommandEncoder = this.device.createCommandEncoder();
         //texture view: image view to the color buffer in this case
-        const textureView : GPUTextureView = this.context.getCurrentTexture().createView();
+        const textureView: GPUTextureView = this.context.getCurrentTexture().createView();
         //renderpass: holds draw commands, allocated from command encoder
-        const renderpass : GPURenderPassEncoder = commandEncoder.beginRenderPass({
+        const renderpass: GPURenderPassEncoder = commandEncoder.beginRenderPass({
             colorAttachments: [{
                 view: textureView,
-                clearValue: {r: 0.5, g: 0.0, b: 0.25, a: 1.0},
+                clearValue: { r: 0.5, g: 0.0, b: 0.25, a: 1.0 },
                 loadOp: "clear",
                 storeOp: "store"
             }]
         });
-        
+
         renderpass.setPipeline(this.pipeline);
         renderpass.setVertexBuffer(0, this.triangleMesh.buffer);
+        renderpass.setBindGroup(0, this.bindGroup);
+        renderpass.draw(3, triangle_count, 0, 0);
 
-        triangles.forEach((triangle) => {
-
-            const model =  triangle.get_model();
-
-            this.device.queue.writeBuffer(this.uniformBuffer, 0, <ArrayBuffer>model); 
-            
-            renderpass.setBindGroup(0, this.bindGroup); 
-            renderpass.draw(3, 1, 0, 0);
-            
-        });
         renderpass.end();
-    
+
         this.device.queue.submit([commandEncoder.finish()]);
 
     }
-    
+
 }
