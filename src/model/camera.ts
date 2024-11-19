@@ -32,9 +32,9 @@ export class Camera {
     update() {
 
         this.forward = [
-            Math.sin(this.theta) * Math.sin(this.phi),
-            Math.cos(this.phi),
-            - Math.cos(this.theta) * Math.sin(this.phi) //Negate the Z to have a camera pointing to [0, 0, -1] by default
+            Math.sin(Deg2Rad(this.theta)) * Math.sin(Deg2Rad(this.phi)),
+            Math.cos(Deg2Rad(this.phi)),
+            - Math.cos(Deg2Rad(this.theta)) * Math.sin(Deg2Rad(this.phi)) //Negate the Z to have a camera pointing to [0, 0, -1] by default
         ]
 
         vec3.cross(this.right, this.forward, [0, 1, 0]);

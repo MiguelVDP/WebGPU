@@ -28,7 +28,7 @@ export class Scene {
             this.triangle_count++;
         }
 
-        this.player = new Camera([0, 0, 2], Math.PI / 2, 0, 0.001);
+        this.player = new Camera([0, 0, 2], 90, 0, 0.1);
     }
 
     update() {
@@ -51,10 +51,10 @@ export class Scene {
     spin_player(dx: number, dy: number) {
 
         this.player.theta += dx * this.player.rotation_speed;
-        this.player.theta %= 2 * Math.PI;
+        this.player.theta %= 360;
 
         this.player.phi += dy * this.player.rotation_speed;
-        this.player.phi = Math.min(3.12, Math.max(0.02, this.player.phi));
+        this.player.phi = Math.min(178, Math.max(5, this.player.phi));
         // if(this.phi < 0.02) {this.phi =0.02;}
         // else if( this.phi > 3.12) {this.phi = 3.12;}
     }
