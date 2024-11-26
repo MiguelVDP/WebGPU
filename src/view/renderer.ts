@@ -1,10 +1,10 @@
 import shader from "./shaders/shader.wgsl"
 import { TriangleMesh } from "./triangle_mesh";
+import { QuadMesh } from "./quad_mesh";
 import { mat4 } from "gl-matrix";
 import { Material } from "./material";
 import { Camera } from "../model/camera";
-import { Triangle } from "../model/triangle";
-
+import { object_types, RenderData } from "../model/definitions";
 export class Renderer {
 
     canvas: HTMLCanvasElement;
@@ -17,12 +17,15 @@ export class Renderer {
 
     // Pipeline objects
     uniformBuffer!: GPUBuffer;
-    bindGroup!: GPUBindGroup;
+    triangle_bindGroup!: GPUBindGroup;
+    quad_bindGroup!: GPUBindGroup;
     pipeline!: GPURenderPipeline;
 
     // Assets
     triangleMesh!: TriangleMesh;
-    material!: Material;
+    quadMesh!: QuadMesh;
+    triangle_material!: Material;
+    quad_material!: Material;
     object_buffer!: GPUBuffer;
 
     //Depth Stencil stuff
@@ -72,7 +75,7 @@ export class Renderer {
             depthWriteEnabled: true,
             depthCompare: "less-equal",
         }
-        
+
         //Define the texture the depth buffer will be using
         const size: GPUExtent3D = {
             width: this.canvas.width,
@@ -142,7 +145,7 @@ export class Renderer {
 
         });
 
-        this.bindGroup = this.device.createBindGroup({
+        this.triangle_bindGroup = this.device.createBindGroup({
             layout: bindGroupLayout,
             entries: [
                 {
@@ -153,11 +156,37 @@ export class Renderer {
                 },
                 {
                     binding: 1,
-                    resource: this.material.view
+                    resource: this.triangle_material.view
                 },
                 {
                     binding: 2,
-                    resource: this.material.sampler
+                    resource: this.triangle_material.sampler
+                },
+                {
+                    binding: 3,
+                    resource: {
+                        buffer: this.object_buffer
+                    }
+                }
+            ]
+        });
+
+        this.quad_bindGroup = this.device.createBindGroup({
+            layout: bindGroupLayout,
+            entries: [
+                {
+                    binding: 0,
+                    resource: {
+                        buffer: this.uniformBuffer
+                    }
+                },
+                {
+                    binding: 1,
+                    resource: this.quad_material.view
+                },
+                {
+                    binding: 2,
+                    resource: this.quad_material.sampler
                 },
                 {
                     binding: 3,
@@ -204,7 +233,9 @@ export class Renderer {
 
     async createAssets() {
         this.triangleMesh = new TriangleMesh(this.device);
-        this.material = new Material();
+        this.quadMesh = new QuadMesh(this.device);
+        this.triangle_material = new Material();
+        this.quad_material = new Material();
 
         const bufferDescriptor: GPUBufferDescriptor = {
             size: 64 * 1024,
@@ -212,17 +243,20 @@ export class Renderer {
         };
         this.object_buffer = this.device.createBuffer(bufferDescriptor);
 
-        await this.material.initialize(this.device, "dist/img/brocode.png");
+        await this.triangle_material.initialize(this.device, "dist/img/brocode.png");
+        await this.quad_material.initialize(this.device, "dist/img/Grass.jpg");
     }
 
-    async render(camera: Camera, triangles: Float32Array, triangle_count: number) {
+    async render(renderData: RenderData) {
 
         //make transforms
         const projection = mat4.create();
-        mat4.perspective(projection, Math.PI / 4, 800 / 600, 0.1, 10);
-        const view = camera.get_view();
+        mat4.perspective(projection, Math.PI / 4, 800 / 600, 0.1, 50);
+        const view = renderData.view_transform;
 
-        this.device.queue.writeBuffer(this.object_buffer, 0, triangles, 0, triangles.length)
+        this.device.queue.writeBuffer(this.object_buffer, 0,
+            renderData.model_transforms, 0,
+            renderData.model_transforms.length)
         this.device.queue.writeBuffer(this.uniformBuffer, 0, <ArrayBuffer>view);
         this.device.queue.writeBuffer(this.uniformBuffer, 64, <ArrayBuffer>projection);
 
@@ -242,9 +276,19 @@ export class Renderer {
         });
 
         renderpass.setPipeline(this.pipeline);
+
+        var objects_drawn: number = 0;
+        //Triangles
         renderpass.setVertexBuffer(0, this.triangleMesh.buffer);
-        renderpass.setBindGroup(0, this.bindGroup);
-        renderpass.draw(3, triangle_count, 0, 0);
+        renderpass.setBindGroup(0, this.triangle_bindGroup);
+        renderpass.draw(3, renderData.object_counts[object_types.TRIANGLE], 0, objects_drawn);
+        objects_drawn += renderData.object_counts[object_types.TRIANGLE];
+
+        //Quads
+        renderpass.setVertexBuffer(0, this.quadMesh.buffer);
+        renderpass.setBindGroup(0, this.quad_bindGroup);
+        renderpass.draw(6, renderData.object_counts[object_types.QUAD], 0, objects_drawn);
+        objects_drawn += renderData.object_counts[object_types.QUAD];
 
         renderpass.end();
 
