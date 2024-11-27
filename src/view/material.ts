@@ -3,8 +3,9 @@ export class Material {
     texture!: GPUTexture
     view!: GPUTextureView
     sampler!: GPUSampler
+    bindGroup!: GPUBindGroup
 
-    async initialize(device: GPUDevice, url: string) {
+    async initialize(device: GPUDevice, url: string, bindGropuLayout: GPUBindGroupLayout) {
         //Extract the data from an image into a format readable for a texture
         const response: Response = await fetch(url);
         const blob: Blob = await response.blob();
@@ -33,6 +34,20 @@ export class Material {
             maxAnisotropy: 1
         }
         this.sampler = device.createSampler(samplerDescriptor);
+
+        this.bindGroup = device.createBindGroup({
+            layout: bindGropuLayout,
+            entries: [
+                {
+                    binding: 0,
+                    resource: this.view
+                },
+                {
+                    binding: 1,
+                    resource: this.sampler
+                }
+            ]
+        });
     }
 
     //Function to load the data into a texture
