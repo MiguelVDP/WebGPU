@@ -5,6 +5,8 @@ import { mat4 } from "gl-matrix";
 import { Material } from "./material";
 import { Camera } from "../model/camera";
 import { object_types, RenderData } from "../model/definitions";
+import { ObjMesh } from "./ojectc_mesh";
+
 export class Renderer {
 
     canvas: HTMLCanvasElement;
@@ -27,6 +29,7 @@ export class Renderer {
     // Assets
     triangleMesh!: TriangleMesh;
     quadMesh!: QuadMesh;
+    statue_mesh!: ObjMesh;
     triangle_material!: Material;
     quad_material!: Material;
     object_buffer!: GPUBuffer;
@@ -157,6 +160,8 @@ export class Renderer {
     async createAssets() {
         this.triangleMesh = new TriangleMesh(this.device);
         this.quadMesh = new QuadMesh(this.device);
+        this.statue_mesh = new ObjMesh()
+        await this.statue_mesh.initialize(this.device, 'dist/models/statue.obj');
         this.triangle_material = new Material();
         this.quad_material = new Material();
 
@@ -276,6 +281,12 @@ export class Renderer {
         renderpass.setBindGroup(1, this.quad_material.bindGroup);
         renderpass.draw(6, renderData.object_counts[object_types.QUAD], 0, objects_drawn);
         objects_drawn += renderData.object_counts[object_types.QUAD];
+
+        //Statue
+        renderpass.setVertexBuffer(0, this.statue_mesh.buffer);
+        renderpass.setBindGroup(1, this.triangle_material.bindGroup);
+        renderpass.draw(this.statue_mesh.vertexCount, 1, 0, objects_drawn)
+        objects_drawn += 1;
 
         renderpass.end();
 
